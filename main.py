@@ -6,6 +6,10 @@ import os
 from bs4 import BeautifulSoup
 load_dotenv()
 
+api_key = os.getenv("SERPER_API_KEY")
+if not api_key:
+    raise ValueError("SERPER_API_KEY environment variable is required")
+
 mcp = FastMCP("docs")
 
 USER_AGENT = "docs-app/1.0"
@@ -21,7 +25,7 @@ async def search_web(query: str) -> dict | None:
     payload = json.dumps({"q": query, "num": 2})
 
     headers = {
-        "X-API-KEY": os.getenv("SERPER_API_KEY"),
+        "X-API-KEY": api_key,
         "Content-Type": "application/json",
     }
 
@@ -63,12 +67,13 @@ async def get_docs(query: str, library: str):
   
   query = f"site:{docs_urls[library]} {query}"
   results = await search_web(query)
-  if len(results["organic"]) == 0:
+  if not results or "organic" not in results or len(results["organic"]) == 0:
     return "No results found"
   
   text = ""
   for result in results["organic"]:
     text += await fetch_url(result["link"])
+  text = text[:50000]
   return text
 
 
