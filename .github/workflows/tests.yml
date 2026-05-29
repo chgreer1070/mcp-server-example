@@ -1,0 +1,61 @@
+name: Tests
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: Validation Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install mcp python-dotenv httpx beautifulsoup4
+
+      - name: Test env var validation (missing key)
+        run: |
+          python -c "
+          import sys, os
+          os.environ.pop('SERPER_API_KEY', None)
+          sys.modules.pop('main', None)
+          try:
+              import main
+              print('FAIL: Should have raised ValueError')
+              sys.exit(1)
+          except ValueError as e:
+              assert 'SERPER_API_KEY' in str(e)
+              print('PASS: Missing key raises ValueError')
+          "
+
+      - name: Test env var validation (valid key)
+        env:
+          SERPER_API_KEY: test_key
+        run: |
+          python -c "
+          import main
+          assert main.api_key == 'test_key'
+          print('PASS: Module loads with valid key')
+          "
+
+      - name: Test safety guards present
+        env:
+          SERPER_API_KEY: test_key
+        run: |
+          python -c "
+          import inspect, main
+          src = inspect.getsource(main.get_docs)
+          assert 'not results or' in src, 'Missing safety guard'
+          assert 'text[:50000]' in src, 'Missing truncation'
+          print('PASS: Safety guards present')
+          "
