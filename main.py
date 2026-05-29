@@ -57,7 +57,7 @@ async def search_web(query: str) -> dict | None:
             return {"organic": []}
   
 # Allowed domains for fetch_url (only fetch from known doc sites)
-ALLOWED_DOMAINS = set(docs_urls.values())
+ALLOWED_DOMAINS = {urlparse("https://" + v).netloc for v in docs_urls.values()}
 
 
 async def fetch_url(url: str):
