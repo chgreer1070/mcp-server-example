@@ -36,18 +36,19 @@ async def search_web(query: str) -> dict | None:
             )
             response.raise_for_status()
             return response.json()
-        except httpx.TimeoutException:
+        except httpx.HTTPError:
             return {"organic": []}
-  
+
 async def fetch_url(url: str):
-  async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient() as client:
         try:
             response = await client.get(url, timeout=30.0)
+            response.raise_for_status()
             soup = BeautifulSoup(response.text, "html.parser")
             text = soup.get_text()
             return text
-        except httpx.TimeoutException:
-            return "Timeout error"
+        except httpx.HTTPError:
+            return ""
 
 @mcp.tool()  
 async def get_docs(query: str, library: str):
@@ -72,7 +73,10 @@ async def get_docs(query: str, library: str):
   
   text = ""
   for result in results["organic"]:
-    text += await fetch_url(result["link"])
+    link = result.get("link")
+    if not link:
+      continue
+    text += await fetch_url(link)
   text = text[:50000]
   return text
 
