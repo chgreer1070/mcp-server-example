@@ -75,12 +75,14 @@ async def fetch_url(url: str):
             current_url = url
             for _ in range(5):
                 response = await client.get(current_url, timeout=30.0, follow_redirects=False)
-                if response.is_redirect:
+                if response.has_redirect_location:
                     current_url = str(response.next_request.url)
                     if not _is_allowed_domain(current_url):
                         return f"Blocked: redirect to {urlparse(current_url).netloc} is not allowed"
                     continue
                 break
+            else:
+                return "Error: too many redirects"
             soup = BeautifulSoup(response.text, "html.parser")
             text = soup.get_text()
             return text
